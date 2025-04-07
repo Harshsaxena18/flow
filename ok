@@ -1,0 +1,91 @@
+import React from "react";
+import _ from "lodash";
+import Layout from "./Automation";
+import { getIncomers, getOutgoers } from "react-flow-renderer";
+import { initialElements } from "./Data/Elements1";
+import { getUpdatedElementsAfterNodeAddition } from "./Utils/WorkflowElementUtils";
+import "antd/dist/antd.css";
+import "./index.scss";
+
+const App = () => {
+  const [elements, setElements] = React.useState([]);
+  const [selectedNode, setSelectedNode] = React.useState(null);
+
+  const onAddNodeCallback = ({ id, type }) => {
+    setElements((elements) =>
+      getUpdatedElementsAfterNodeAddition({
+        elements,
+        targetEdgeId: id,
+        type,
+        onDeleteNodeCallback,
+        onNodeClickCallback,
+        onAddNodeCallback,
+      })
+    );
+  };
+
+  const onDeleteNodeCallback = (id) => {
+    setElements((elements) => {
+      const clonedElements = _.cloneDeep(elements);
+      const incomingEdges = clonedElements.filter((x) => x.target === id);
+      const outgoingEdges = clonedElements.filter((x) => x.source === id);
+
+      const updatedIncomingEdges = incomingEdges.map((x) => ({
+        ...x,
+        target: outgoingEdges[0]?.target || null,
+      }));
+
+      const filteredElements = clonedElements.filter(
+        (x) =>
+          x.id !== id &&
+          x.target !== incomingEdges[0]?.target &&
+          x.source !== outgoingEdges[0]?.source
+      );
+
+      filteredElements.push(...updatedIncomingEdges);
+      return filteredElements;
+    });
+  };
+
+  const onNodeClickCallback = (id) => {
+    const currentNode = elements.find((x) => x.id === id && x.position);
+    setSelectedNode(currentNode);
+    console.log("Incomers / Outgoers", {
+      incomers: getIncomers(currentNode, elements.filter((x) => x.position), elements.filter((x) => !x.position)),
+      outgoers: getOutgoers(currentNode, elements.filter((x) => x.position), elements.filter((x) => !x.position)),
+    });
+  };
+
+  React.useEffect(() => {
+    const nodes = initialElements
+      .filter((x) => !x.target)
+      .map((x) => ({
+        ...x,
+        data: {
+          ...x.data,
+          onDeleteNodeCallback,
+          onNodeClickCallback,
+        },
+      }));
+
+    const edges = initialElements
+      .filter((x) => x.target)
+      .map((x) => ({
+        ...x,
+        data: {
+          ...x.data,
+          onAddNodeCallback,
+        },
+      }));
+
+    setElements([...nodes, ...edges]);
+  }, []);
+
+  return (
+    <div className="App">
+      <Layout elements={elements} setElements={setElements} selectedNode={selectedNode} />
+    </div>
+  );
+};
+
+export default App;
