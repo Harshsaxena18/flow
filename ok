@@ -1,91 +1,44 @@
-import React from "react";
-import _ from "lodash";
-import Layout from "./Automation";
-import { getIncomers, getOutgoers } from "react-flow-renderer";
-import { initialElements } from "./Data/Elements1";
-import { getUpdatedElementsAfterNodeAddition } from "./Utils/WorkflowElementUtils";
-import "antd/dist/antd.css";
-import "./index.scss";
+const onDeleteNodeCallback = (id) => {
+  setElements((elements) => {
+    const clonedElements = _.cloneDeep(elements);
 
-const App = () => {
-  const [elements, setElements] = React.useState([]);
-  const [selectedNode, setSelectedNode] = React.useState(null);
+    // Find the node to delete (must be a node, not an edge)
+    const nodeToDelete = clonedElements.find((x) => x.id === id && x.position);
+    if (!nodeToDelete) return clonedElements;
 
-  const onAddNodeCallback = ({ id, type }) => {
-    setElements((elements) =>
-      getUpdatedElementsAfterNodeAddition({
-        elements,
-        targetEdgeId: id,
-        type,
-        onDeleteNodeCallback,
-        onNodeClickCallback,
-        onAddNodeCallback,
-      })
+    // Get edges that go into and out of the node
+    const incomingEdges = clonedElements.filter((el) => el.target === id);
+    const outgoingEdges = clonedElements.filter((el) => el.source === id);
+
+    // Pick one outgoing edge to reconnect (prefer the one labeled "Yes" or with a clear condition)
+    const preferredEdge =
+      outgoingEdges.find((e) =>
+        (e.data?.condition || e.label || '').toLowerCase().includes('yes')
+      ) || outgoingEdges[0];
+
+    // If there's one incoming edge and one chosen outgoing edge, merge them
+    const newEdge =
+      incomingEdges.length && preferredEdge
+        ? {
+            id: `e${incomingEdges[0].source}-${preferredEdge.target}`,
+            source: incomingEdges[0].source,
+            target: preferredEdge.target,
+            type: 'condition',
+            data: {
+              ...preferredEdge.data, // retain callbacks
+            },
+            label: preferredEdge.label || '', // optional: preserve edge label
+          }
+        : null;
+
+    // Remove the node and all its related edges
+    const filtered = clonedElements.filter(
+      (el) => el.id !== id && el.source !== id && el.target !== id
     );
-  };
 
-  const onDeleteNodeCallback = (id) => {
-    setElements((elements) => {
-      const clonedElements = _.cloneDeep(elements);
-      const incomingEdges = clonedElements.filter((x) => x.target === id);
-      const outgoingEdges = clonedElements.filter((x) => x.source === id);
+    // Add the new merged edge if applicable
+    if (newEdge) filtered.push(newEdge);
 
-      const updatedIncomingEdges = incomingEdges.map((x) => ({
-        ...x,
-        target: outgoingEdges[0]?.target || null,
-      }));
-
-      const filteredElements = clonedElements.filter(
-        (x) =>
-          x.id !== id &&
-          x.target !== incomingEdges[0]?.target &&
-          x.source !== outgoingEdges[0]?.source
-      );
-
-      filteredElements.push(...updatedIncomingEdges);
-      return filteredElements;
-    });
-  };
-
-  const onNodeClickCallback = (id) => {
-    const currentNode = elements.find((x) => x.id === id && x.position);
-    setSelectedNode(currentNode);
-    console.log("Incomers / Outgoers", {
-      incomers: getIncomers(currentNode, elements.filter((x) => x.position), elements.filter((x) => !x.position)),
-      outgoers: getOutgoers(currentNode, elements.filter((x) => x.position), elements.filter((x) => !x.position)),
-    });
-  };
-
-  React.useEffect(() => {
-    const nodes = initialElements
-      .filter((x) => !x.target)
-      .map((x) => ({
-        ...x,
-        data: {
-          ...x.data,
-          onDeleteNodeCallback,
-          onNodeClickCallback,
-        },
-      }));
-
-    const edges = initialElements
-      .filter((x) => x.target)
-      .map((x) => ({
-        ...x,
-        data: {
-          ...x.data,
-          onAddNodeCallback,
-        },
-      }));
-
-    setElements([...nodes, ...edges]);
-  }, []);
-
-  return (
-    <div className="App">
-      <Layout elements={elements} setElements={setElements} selectedNode={selectedNode} />
-    </div>
-  );
+    return filtered;
+  });
 };
-
-export default App;
