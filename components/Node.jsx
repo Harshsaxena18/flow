@@ -49,7 +49,7 @@ export default function Node({
               value={logic || ""}
               onChange={handleLogicChange}
               style={{
-                width: "100%",
+                width: "100%", 
                 marginTop: 4,
                 fontSize: "10px",
                 padding: "2px",
