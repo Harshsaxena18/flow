@@ -50,7 +50,7 @@ export default function App() {
     setNodes([...positioned]);
   };
   
-  const addNode = (parentId, x, y, isCondition = false, type = "email") => {
+  const addNode = (parentId, x, y, isCondition = false, type = "form") => {
     const id = Date.now().toString();
     const newNode = {
       id,
@@ -88,7 +88,7 @@ export default function App() {
         x: x + 200,
         y: y + 100,
         label: "YES",
-        type: "email",
+        type: "form",
         logic: "",
       };
   
@@ -97,7 +97,7 @@ export default function App() {
         x: x + 200,
         y: y + 200,
         label: "NO",
-        type: "email",
+        type: "form",
         logic: "",
       };
   
@@ -114,7 +114,7 @@ export default function App() {
   
 
   const deleteNode = (nodeId) => {
-    // Helper function to get all descendants recursively
+    //  function to get all children nodes 
     const getDescendants = (id, allEdges, collected = new Set()) => {
       const children = allEdges.filter(e => e.from === id).map(e => e.to);
       children.forEach(childId => {
