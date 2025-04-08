@@ -6,8 +6,6 @@ export default function Node({
   onDeleteNode,
   onRenameNode,
   onUpdateLogic,
-  onUpdateType,
-  onConnectNodes,
   onMouseDown,
 }) {
   const { x, y, label, type, id, logic } = data;
@@ -19,17 +17,9 @@ export default function Node({
     if (newLabel) onRenameNode(id, newLabel);
   };
 
-  const handleConnect = () => {
-    const targetId = prompt("Enter ID of node to connect to:");
-    if (targetId) onConnectNodes(id, targetId);
-  };
-
+  
   const handleLogicChange = (e) => {
     onUpdateLogic(id, e.target.value);
-  };
-
-  const handleTypeChange = (e) => {
-    onUpdateType(id, e.target.value);
   };
 
   return (
@@ -53,17 +43,7 @@ export default function Node({
         <div style={{ padding: 4, fontSize: 12, color: "white" }}>
           <strong>{label}</strong>
           <br />
-          <select
-            value={type}
-            onChange={handleTypeChange}
-            style={{ width: "100%", marginTop: 4 }}
-            disabled={type === "start"}
-          >
-            <option value="email">Email</option>
-            <option value="wait">Wait</option>
-            <option value="webhook">Webhook</option>
-            <option value="condition">Condition</option>
-          </select>
+          
           {type === "condition" && (
             <input
               value={logic || ""}
@@ -89,13 +69,7 @@ export default function Node({
             color="#dc3545"
             label="X"
           />
-          <AddButton
-            x={-20}
-            y={40}
-            onClick={handleConnect}
-            color="#6c757d"
-            label="→"
-          />
+          
         </>
       )}
 
