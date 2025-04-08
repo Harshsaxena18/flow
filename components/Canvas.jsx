@@ -36,7 +36,7 @@ export default function Canvas({
     const newY = e.clientY - svgRect.top - offset.y;
     onMoveNode(draggingNodeId, newX, newY);
   };
-
+ 
   const handleMouseUp = () => {
     setDraggingNodeId(null);
   };
@@ -109,12 +109,7 @@ export default function Canvas({
             fontSize: 12,
           }}
         >
-          <div
-            onClick={() => handleAddClick("email")}
-            style={{ cursor: "pointer", padding: "4px" }}
-          >
-            ➕ Email
-          </div>
+          
           <div
             onClick={() => handleAddClick("condition")}
             style={{ cursor: "pointer", padding: "4px" }}
