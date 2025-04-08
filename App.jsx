@@ -13,10 +13,43 @@ export default function App() {
 
 
   const layoutAndSetNodes = (newNodes, newEdges) => {
-    const laidOut = autoLayout(newNodes, newEdges);
-    setNodes(laidOut);
+    const positioned = [];
+    const visited = new Set();
+    const nodeMap = Object.fromEntries(newNodes.map((n) => [n.id, n]));
+  
+    const positionNode = (id, depth = 0, siblingOffset = 0) => {
+      if (visited.has(id)) return;
+      visited.add(id);
+  
+      const node = nodeMap[id];
+  
+      // Only reposition if node hasn't been moved manually (has x=0 and y=0 or some flag)
+      const manuallyMoved = node._movedManually;
+      if (!manuallyMoved) {
+        node.x = 100 + depth * 200;
+        node.y = 100 + siblingOffset * 100;
+      }
+  
+      positioned.push(node);
+  
+      const children = newEdges
+        .filter((e) => e.from === id)
+        .map((e) => nodeMap[e.to])
+        .filter(Boolean);
+  
+      children.forEach((child, idx) => {
+        positionNode(child.id, depth + 1, siblingOffset + idx);
+      });
+    };
+  
+    const rootNodes = newNodes.filter((n) => !newEdges.some((e) => e.to === n.id));
+    rootNodes.forEach((root, idx) => {
+      positionNode(root.id, 0, idx);
+    });
+  
+    setNodes([...positioned]);
   };
-
+  
   const addNode = (parentId, x, y, isCondition = false, type = "email") => {
     const id = Date.now().toString();
     const newNode = {
@@ -81,34 +114,36 @@ export default function App() {
   
 
   const deleteNode = (nodeId) => {
-    const nodeToDelete = nodes.find((n) => n.id === nodeId);
-    if (!nodeToDelete) return;
-  
-    const children = edges.filter((e) => e.from === nodeId).map((e) => e.to);
-    const parents = edges.filter((e) => e.to === nodeId).map((e) => e.from);
-  
-    const newEdges = edges.filter(
-      (e) => e.from !== nodeId && e.to !== nodeId
-    );
-  
-    const newNodes = nodes.filter((n) => n.id !== nodeId);
-  
-    if (parents.length === 1 && children.length >= 1) {
-      const parent = parents[0];
-      children.forEach((child) => {
-        if (!newEdges.find((e) => e.from === parent && e.to === child)) {
-          newEdges.push({ id: `${parent}-${child}`, from: parent, to: child });
+    // Helper function to get all descendants recursively
+    const getDescendants = (id, allEdges, collected = new Set()) => {
+      const children = allEdges.filter(e => e.from === id).map(e => e.to);
+      children.forEach(childId => {
+        if (!collected.has(childId)) {
+          collected.add(childId);
+          getDescendants(childId, allEdges, collected);
         }
       });
-    }
+      return collected;
+    };
+  
+    // Get all descendant node IDs
+    const descendantIds = getDescendants(nodeId, edges);
+    descendantIds.add(nodeId); // Include the node itself
+  
+    // Filter out nodes and edges connected to this node or its descendants
+    const newNodes = nodes.filter(n => !descendantIds.has(n.id));
+    const newEdges = edges.filter(
+      e => !descendantIds.has(e.from) && !descendantIds.has(e.to)
+    );
   
     setEdges(newEdges);
     layoutAndSetNodes(newNodes, newEdges);
   };
+  
   const moveNode = (id, newX, newY) => {
     setNodes((prev) =>
       prev.map((node) =>
-        node.id === id ? { ...node, x: newX, y: newY } : node
+        node.id === id ? { ...node, x: newX, y: newY ,_movedManually: true} : node
       )
     );
   };
